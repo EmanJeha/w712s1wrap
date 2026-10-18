@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Insertion Showdown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a bright game show on the classroom screen. Scoreboard strip on top, one big question card, colorful answer tiles.
+   Deliberately a single light theme (the teacher asked for light and colorful). */
+:root {
+  color-scheme: light;
+  --sky: #EEF5FF; --paper: #FFFFFF; --ink: #1D2340; --soft: #5C6489; --line: #DCE4F7;
+  --pink: #FF4F8B; --orange: #FF9F1C; --yellow: #FFD23F; --teal: #14C3A2; --blue: #3A86FF; --purple: #8F4DFF;
+  --good: #12B886; --bad: #FF5470;
+  --teamA: #FF4F8B; --teamB: #3A86FF;
+  --f-display: 'Baloo 2', 'Nunito', system-ui, sans-serif;
+  --f-body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-code: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; color: var(--ink); font: 18px/1.5 var(--f-body); background: var(--sky);
+  background-image: radial-gradient(circle at 12% 18%, #FFE3EE 0, transparent 28%), radial-gradient(circle at 88% 12%, #DDF7F1 0, transparent 26%), radial-gradient(circle at 80% 92%, #FFF1C9 0, transparent 30%), radial-gradient(circle at 6% 88%, #E7DDFF 0, transparent 28%);
+  background-attachment: fixed; overflow-x: hidden; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 4px solid var(--purple); outline-offset: 3px; border-radius: 12px; }
+h1, h2, h3 { margin: 0; font-family: var(--f-display); line-height: 1.05; text-wrap: balance; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 18px; padding-block: 16px 28px; min-height: 100%; display: flex; flex-direction: column; gap: 16px; position: relative; z-index: 1; }
+
+/* floating number cards in the background */
+.floaters { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.floaters span { position: absolute; width: 58px; height: 74px; border-radius: 14px; display: grid; place-items: center; font: 800 26px/1 var(--f-display); color: #fff; opacity: .22; animation: drift 14s ease-in-out infinite; }
+@keyframes drift { 50% { transform: translateY(-26px) rotate(8deg); } }
+
+.btn { border: 0; border-radius: 16px; padding: 14px 24px; font: 800 19px/1 var(--f-display); letter-spacing: .02em; background: var(--paper); color: var(--ink); box-shadow: 0 5px 0 var(--line); transition: transform .12s, box-shadow .12s; display: inline-flex; align-items: center; gap: 10px; }
+.btn:hover { transform: translateY(-2px); box-shadow: 0 7px 0 var(--line); }
+.btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--line); }
+.btn.go { background: var(--purple); color: #fff; box-shadow: 0 5px 0 #6A2FD0; }
+.btn.go:hover { box-shadow: 0 7px 0 #6A2FD0; }
+.btn.pink { background: var(--pink); color: #fff; box-shadow: 0 5px 0 #D8306B; }
+.btn.small { padding: 9px 14px; font-size: 15px; border-radius: 12px; }
+.btn[disabled] { opacity: .45; pointer-events: none; }
+
+/* start */
+.start { flex: 1; display: grid; place-items: center; text-align: center; }
+.start .card { background: var(--paper); border-radius: 32px; padding: clamp(24px, 4vw, 48px); box-shadow: 0 10px 0 var(--line), 0 30px 60px -30px rgba(58, 134, 255, .45); max-width: 820px; width: 100%; display: grid; gap: 20px; justify-items: center; }
+.pill { display: inline-flex; gap: 8px; align-items: center; padding: 6px 14px; border-radius: 999px; font: 800 14px/1.2 var(--f-body); letter-spacing: .08em; text-transform: uppercase; background: #FFF1C9; color: #8A5B00; }
+.title { font-size: clamp(48px, 8vw, 92px); font-weight: 800; letter-spacing: -.01em; }
+.title .c1 { color: var(--pink); } .title .c2 { color: var(--orange); } .title .c3 { color: var(--teal); } .title .c4 { color: var(--blue); } .title .c5 { color: var(--purple); }
+.lede { margin: 0; font-size: clamp(18px, 2.2vw, 22px); color: var(--soft); max-width: 52ch; }
+.teams { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 560px; }
+.teams label { display: grid; gap: 6px; text-align: left; font-weight: 800; font-size: 14px; color: var(--soft); }
+.teams input { width: 100%; min-width: 0; border: 3px solid var(--line); border-radius: 14px; padding: 12px 14px; font: 800 20px/1 var(--f-display); background: var(--paper); }
+.teams input:focus { outline: none; }
+#tA:focus { border-color: var(--teamA); } #tB:focus { border-color: var(--teamB); }
+.rules { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.rules span { padding: 8px 14px; border-radius: 12px; background: var(--sky); font-weight: 700; font-size: 15px; }
+
+/* scoreboard */
+.board { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: center; }
+.team { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-radius: 20px; background: var(--paper); border: 4px solid transparent; transition: border-color .2s, transform .2s; box-shadow: 0 5px 0 var(--line); min-width: 0; }
+.team.B { flex-direction: row-reverse; text-align: right; }
+.team .nm { font: 800 clamp(16px, 2vw, 22px)/1.1 var(--f-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+.team .sc { font: 800 clamp(30px, 4vw, 44px)/1 var(--f-display); font-variant-numeric: tabular-nums; }
+.team.A .sc { color: var(--teamA); } .team.B .sc { color: var(--teamB); }
+.team.on.A { border-color: var(--teamA); transform: scale(1.03); } .team.on.B { border-color: var(--teamB); transform: scale(1.03); }
+.team .turn { font: 800 12px/1 var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: #fff; padding: 5px 8px; border-radius: 8px; visibility: hidden; }
+.team.A .turn { background: var(--teamA); } .team.B .turn { background: var(--teamB); }
+.team.on .turn { visibility: visible; }
+.mid { display: grid; justify-items: center; gap: 6px; }
+.dots { display: flex; gap: 6px; }
+.dots i { width: 14px; height: 14px; border-radius: 50%; background: var(--line); }
+.dots i.done { background: var(--teal); } .dots i.miss { background: var(--orange); } .dots i.now { background: var(--purple); transform: scale(1.25); }
+.ring { --p: 1; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--c, var(--teal)) calc(var(--p) * 360deg), var(--line) 0); }
+.ring b { width: 50px; height: 50px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; font: 800 22px/1 var(--f-display); font-variant-numeric: tabular-nums; }
+.ring.low { --c: var(--bad); animation: throb .8s infinite; }
+@keyframes throb { 50% { transform: scale(1.08); } }
+.ring.off b { font-size: 13px; color: var(--soft); }
+.tools { display: flex; gap: 8px; }
+
+/* mystery phrase (warm-up) */
+.mystery { background: var(--paper); border-radius: 22px; padding: 14px 18px; box-shadow: 0 5px 0 var(--line); display: grid; gap: 10px; }
+.mystery .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mystery .lbl { font: 800 14px/1 var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--soft); }
+.tiles { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.tile { width: clamp(30px, 5vw, 50px); height: clamp(40px, 6.4vw, 62px); border-radius: 12px; display: grid; place-items: center; font: 800 clamp(22px, 3.4vw, 36px)/1 var(--f-display); color: #fff; background: #E3E9F8; transition: background .3s; }
+.tile.gap { background: transparent; width: clamp(10px, 2vw, 22px); }
+.tile.shown { animation: flip .55s ease; }
+@keyframes flip { 0% { transform: rotateY(90deg) scale(.8); } 100% { transform: none; } }
+.guess { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.guess input { border: 3px solid var(--line); border-radius: 14px; padding: 10px 14px; font: 800 20px/1 var(--f-display); min-width: 0; flex: 0 1 300px; }
+.guess input:focus { outline: none; border-color: var(--purple); }
+
+/* question card */
+.qcard { background: var(--paper); border-radius: 28px; padding: clamp(18px, 3vw, 32px); box-shadow: 0 8px 0 var(--line); display: grid; gap: 18px; animation: pop .4s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes pop { from { transform: scale(.94); opacity: 0; } }
+.qhead { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.tag { padding: 5px 12px; border-radius: 999px; font: 800 13px/1.2 var(--f-body); letter-spacing: .06em; text-transform: uppercase; }
+.tag.n { background: var(--ink); color: #fff; }
+.tag.ctx { background: #DDF7F1; color: #08715E; }
+.tag.hot { background: #EFE6FF; color: #6A2FD0; }
+.qtext { font: 800 clamp(24px, 3.2vw, 38px)/1.2 var(--f-display); }
+.qsub { margin: -6px 0 0; color: var(--soft); font-size: clamp(17px, 1.8vw, 20px); }
+.scene { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.chip { padding: 8px 14px; border-radius: 12px; font: 800 20px/1 var(--f-display); color: #fff; }
+.chip.new { outline: 4px dashed var(--orange); outline-offset: 3px; color: var(--ink); background: var(--yellow); }
+.arrow { font: 800 24px/1 var(--f-display); color: var(--soft); }
+
+.opts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.opt { border: 0; border-radius: 20px; padding: 18px 18px 18px 72px; text-align: left; min-height: 84px; position: relative; color: #fff; font: 700 clamp(17px, 1.8vw, 21px)/1.3 var(--f-body); box-shadow: 0 6px 0 rgba(0,0,0,.14); transition: transform .12s, filter .2s, opacity .2s; }
+.opt::before { content: attr(data-k); position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 42px; height: 42px; border-radius: 12px; background: rgba(255,255,255,.28); display: grid; place-items: center; font: 800 22px/1 var(--f-display); }
+.opt:hover { transform: translateY(-3px); }
+.opt.o0 { background: var(--pink); } .opt.o1 { background: var(--blue); } .opt.o2 { background: var(--orange); } .opt.o3 { background: var(--teal); }
+.opt.dim { opacity: .3; transform: none; }
+.opt.right { outline: 6px solid var(--good); outline-offset: 3px; animation: bounce .5s; opacity: 1; }
+.opt.right::after { content: '✓'; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; background: #fff; color: var(--good); display: grid; place-items: center; font: 800 26px/1 var(--f-display); }
+.opt.wrong { animation: shake .45s; opacity: .35; }
+@keyframes bounce { 40% { transform: translateY(-8px) scale(1.02); } }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+
+/* order tiles */
+.order { display: grid; gap: 30px; }
+.slots, .pool { display: flex; gap: 10px; flex-wrap: wrap; }
+.slot { width: clamp(64px, 9vw, 96px); height: clamp(64px, 9vw, 90px); border-radius: 16px; border: 3px dashed var(--line); display: grid; place-items: center; font: 800 clamp(22px, 3vw, 32px)/1 var(--f-display); position: relative; background: var(--sky); }
+.slot small { position: absolute; bottom: -22px; font: 700 13px/1 var(--f-code); color: var(--soft); }
+.slot.filled { border-style: solid; background: var(--paper); border-color: var(--purple); }
+.slot.ok { border-color: var(--good); background: #E3FAF2; }
+.slot.no { border-color: var(--bad); background: #FFE8EC; }
+.ptile { min-width: clamp(64px, 9vw, 96px); height: clamp(56px, 7vw, 76px); padding: 0 12px; border: 0; border-radius: 16px; color: #fff; font: 800 clamp(22px, 3vw, 32px)/1 var(--f-display); box-shadow: 0 5px 0 rgba(0,0,0,.15); transition: transform .12s, opacity .2s; }
+.ptile:hover { transform: translateY(-3px); }
+.ptile.used { opacity: .2; pointer-events: none; }
+.order .acts { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+
+/* code lines */
+.code { background: #F6F4FF; border-radius: 18px; padding: 10px; display: grid; gap: 4px; overflow-x: auto; border: 2px solid #E6DEFF; }
+.cl { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; border: 0; text-align: left; background: transparent; border-radius: 10px; padding: 6px 10px; font: 600 clamp(15px, 1.7vw, 19px)/1.35 var(--f-code); white-space: pre; color: var(--ink); }
+.cl span:first-child { color: #9AA0C3; text-align: right; }
+.cl:hover { background: #fff; }
+.cl.right { background: #E3FAF2; outline: 3px solid var(--good); }
+.cl.wrong { background: #FFE8EC; outline: 3px solid var(--bad); }
+.kw { color: #C2187A; } .fn { color: #2C66D9; } .num { color: #C26A00; } .str { color: #0B8A6E; }
+
+/* feedback */
+.fb { border-radius: 20px; padding: 16px 18px; display: grid; gap: 8px; animation: pop .35s cubic-bezier(.2, 1.4, .4, 1); }
+.fb.good { background: #E3FAF2; } .fb.bad { background: #FFF0E0; } .fb.steal { background: #EFE6FF; }
+.fb h3 { font-size: clamp(24px, 3vw, 32px); }
+.fb.good h3 { color: #088A64; } .fb.bad h3 { color: #C25100; } .fb.steal h3 { color: #6A2FD0; }
+.fb p { margin: 0; font-size: clamp(16px, 1.8vw, 19px); }
+.fb .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+
+/* end */
+.end { flex: 1; display: grid; place-items: center; text-align: center; }
+.end .card { background: var(--paper); border-radius: 32px; padding: clamp(24px, 4vw, 44px); box-shadow: 0 10px 0 var(--line); max-width: 860px; width: 100%; display: grid; gap: 18px; justify-items: center; }
+.crown { font: 800 clamp(40px, 6vw, 70px)/1 var(--f-display); }
+.finals { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; }
+.final { border-radius: 22px; padding: 18px; color: #fff; display: grid; gap: 4px; }
+.final.A { background: var(--teamA); } .final.B { background: var(--teamB); }
+.final b { font: 800 clamp(40px, 6vw, 64px)/1 var(--f-display); }
+.final.win { outline: 6px solid var(--yellow); outline-offset: 4px; }
+.reveal { display: grid; gap: 8px; justify-items: center; }
+.reveal .big { font: 800 clamp(40px, 7vw, 80px)/1 var(--f-display); background: linear-gradient(90deg, var(--pink), var(--orange), var(--teal), var(--blue), var(--purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.exit { width: 100%; text-align: left; background: var(--sky); border-radius: 22px; padding: 18px; display: grid; gap: 10px; }
+.exit textarea { width: 100%; min-height: 90px; border: 3px solid var(--line); border-radius: 14px; padding: 12px; font-size: 18px; resize: vertical; background: var(--paper); }
+.exit textarea:focus { outline: none; border-color: var(--purple); }
+.model { background: var(--paper); border-left: 6px solid var(--teal); border-radius: 12px; padding: 12px 14px; }
+.recap { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; width: 100%; text-align: left; }
+.recap div { background: var(--sky); border-radius: 16px; padding: 12px 14px; font-size: 16px; }
+.recap b { display: block; font: 800 18px/1.2 var(--f-display); }
+
+#fx { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
+.toast { position: fixed; left: 50%; top: 18px; transform: translateX(-50%); z-index: 40; background: var(--ink); color: #fff; padding: 12px 20px; border-radius: 14px; font: 800 20px/1.2 var(--f-display); animation: pop .3s; }
+
+@media (max-width: 760px) {
+  .opts, .finals, .teams { grid-template-columns: 1fr; }
+  .board { grid-template-columns: 1fr 1fr; }
+  .mid { grid-column: 1 / -1; grid-row: 1; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="floaters" id="floaters" aria-hidden="true"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="wrap" id="app"></div>
+
+<script>
+/* ================= GAME CONTENT ================= */
+const GAME = {"badge": "Unit 4 · Week 7 · Session 1 · Wrap-up", "titleHTML": "<span class=\"c1\">I</span><span class=\"c2\">n</span><span class=\"c3\">s</span><span class=\"c4\">e</span><span class=\"c5\">r</span><span class=\"c1\">t</span><span class=\"c2\">i</span><span class=\"c3\">o</span><span class=\"c4\">n</span><br><span class=\"c3\">S</span><span class=\"c4\">h</span><span class=\"c5\">o</span><span class=\"c1\">w</span><span class=\"c2\">d</span><span class=\"c3\">o</span><span class=\"c4\">w</span><span class=\"c5\">n</span>", "intro": "Ten challenges on today’s lesson: trace it, debug it, bend it. Prove your team really gets insertion sort.", "rules": ["2 teams take turns", "60 seconds per challenge", "Wrong answer? The other team can steal", "Tap tiles to build lists", "Tap a code line to answer"], "seconds": 60, "points": 100, "steal": true, "floaters": ["20", "43", "28", "15", "31", "4", "key", "j"], "questions": [{"type": "order", "ctx": "Trace it", "skill": "Apply", "q": "Build the list after Pass 2 (key = 28).", "sub": "Start: [20, 43, 28, 15, 31, 4]. Tap the numbers in order to fill index [0] to [5].", "tiles": [20, 43, 28, 15, 31, 4], "answer": [20, 28, 43, 15, 31, 4], "why": "Pass 1: 43 > 20, so it stays. Pass 2: 28 < 43, so 43 shifts right and 28 drops in after 20. 15, 31 and 4 are still unsorted."}, {"type": "mc", "ctx": "Count the shifts", "skill": "Analyze", "q": "Pass 3: the key is 15 and the sorted part is [20, 28, 43]. How many shifts happen?", "scene": "<span class=\"chip\" style=\"background:#FF4F8B\">20</span><span class=\"chip\" style=\"background:#3A86FF\">28</span><span class=\"chip\" style=\"background:#FF9F1C\">43</span><span class=\"arrow\">key →</span><span class=\"chip new\">15</span>", "options": ["1", "2", "3", "4"], "answer": 2, "why": "15 is smaller than 43, 28 and 20, so all three shift one place right and 15 lands at index 0."}, {"type": "line", "ctx": "Change the code", "skill": "Create", "q": "Tap the ONE line you would change to sort in descending order (biggest first).", "code": ["myList = [20, 43, 28, 15, 31, 4]", "N = len(myList)", "for i in range(1, N):", "    key = myList[i]", "    j = i - 1", "    while j >= 0 and key < myList[j]:", "        myList[j + 1] = myList[j]", "        j = j - 1", "    myList[j + 1] = key", "print(\"Sorted list:\", myList)"], "answer": 5, "why": "Change key < myList[j] to key > myList[j]. Now smaller items shift right, so the biggest values end up at the front."}, {"type": "mc", "ctx": "Read the code", "skill": "Infer", "q": "Why does the code copy myList[i] into key BEFORE the while loop starts?", "options": ["To make the program shorter", "Because the first shift overwrites myList[i], so its value would be lost", "Because Python needs a variable called key", "To count how many passes are left"], "answer": 1, "why": "The first shift copies myList[j] into position j + 1, which is exactly where the key was sitting. Saving it first keeps it safe."}, {"type": "mc", "ctx": "Debug it", "skill": "Evaluate", "q": "A student writes myList[j] = key instead of myList[j + 1] = key after the while loop. What happens?", "options": ["Nothing. Both lines do the same job", "The key lands one place too far left and overwrites a value", "The list is sorted in descending order", "Python stops with a syntax error"], "answer": 1, "why": "When the loop stops, j points at an item that is NOT bigger than the key. The gap is at j + 1. Writing to j overwrites a real value, so a number disappears."}, {"type": "mc", "ctx": "Read the code", "skill": "Analyze", "q": "What is the job of j >= 0 in the while condition?", "options": ["It makes the loop run faster", "It stops j going past the front of the list when the key is the smallest", "It checks that the list is not empty", "It lets the list hold negative numbers"], "answer": 1, "why": "When the key is the smallest (like 4), j keeps moving left. Without j >= 0, Python would compare with myList[-1], which is the LAST item, and the sort would go wrong."}, {"type": "order", "ctx": "Strings too", "skill": "Apply", "q": "Letters work too! Build the list after Pass 2.", "sub": "Start: ['x', 'f', 'g', 'a', 'b']. Tap the letters in order.", "tiles": ["x", "f", "g", "a", "b"], "answer": ["f", "g", "x", "a", "b"], "why": "Pass 1: 'f' < 'x', so 'x' shifts and 'f' goes first. Pass 2: 'g' < 'x' but 'g' > 'f', so only 'x' shifts. Letters compare alphabetically, just like numbers."}, {"type": "mc", "ctx": "Descending states", "skill": "Analyze", "q": "Sorting ['Ohio', 'Maine', 'Alabama', 'Idaho'] Z–A with key > myList[j]. In the LAST pass the key is 'Idaho'. Which states shift right?", "options": ["Ohio, Maine and Alabama", "Only Alabama", "Maine and Alabama", "None of them"], "answer": 1, "why": "Before the last pass the list is still ['Ohio', 'Maine', 'Alabama', 'Idaho']. 'Idaho' > 'Alabama', so Alabama shifts. 'Idaho' > 'Maine'? No, I comes before M, so the loop stops. Result: ['Ohio', 'Maine', 'Idaho', 'Alabama']."}, {"type": "mc", "ctx": "Best case", "skill": "Evaluate", "q": "Which starting list makes insertion sort do the FEWEST shifts?", "options": ["[9, 7, 5, 3, 1]", "[1, 3, 5, 7, 9]", "[5, 1, 9, 3, 7]", "They all need the same number"], "answer": 1, "why": "An already-sorted list needs zero shifts: every key is already bigger than the item before it. A reversed list is the worst, because every key shifts all the way to the front."}, {"type": "mc", "ctx": "Real world", "skill": "Evaluate", "q": "Which job is insertion sort the BEST fit for?", "options": ["Adding today’s new score to an already-sorted class leaderboard", "Sorting 10 million random online orders", "Finding one name in a phone book", "Shuffling a playlist"], "answer": 0, "why": "Insertion sort shines on small or nearly-sorted lists: one new item just slides into place. Huge random lists need faster algorithms, and finding a name is searching, not sorting."}], "endHTML": "<div class=\"exit\">\n      <span class=\"pill\">Exit ticket</span>\n      <h2 style=\"font-size:clamp(24px,3vw,32px)\">Define sorting in your own words.</h2>\n      <textarea id=\"exitTicket\" placeholder=\"Sorting is...\"></textarea>\n      <button class=\"btn small go\" id=\"showModel\" type=\"button\" style=\"justify-self:start\">Show a model answer</button>\n      <div class=\"model\" id=\"model\" hidden><b>Model answer:</b> Sorting means arranging items in a meaningful order, such as smallest to largest or A to Z, so they are easier to find and use. Insertion sort does it by building a sorted part one item at a time: it shifts larger items right and inserts each key into the gap.</div>\n    </div>\n    <div class=\"recap\"><div><b>Key</b>The item being placed in this pass</div><div><b>Shift</b>Bigger items move one place right</div><div><b>Insert</b>The key drops into the gap at j + 1</div></div>"};
+
+/* ================= ENGINE ================= */
+const COLORS = ['#FF4F8B', '#3A86FF', '#FF9F1C', '#14C3A2', '#8F4DFF', '#FFC233'];
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const S = { teams: ['Team A', 'Team B'], score: [0, 0], turn: 0, q: 0, results: [], timerOn: true, sound: true, revealed: new Set(), guessed: false };
+let tick = null, left = 0, answered = false, stealing = false, picks = [];
+
+/* sound (starts after the first click) */
+let ac = null;
+function beep(type) {
+  if (!S.sound) return;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const notes = type === 'good' ? [523, 659, 784] : type === 'bad' ? [300, 220] : type === 'win' ? [523, 659, 784, 1047] : [660];
+    notes.forEach((f, i) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = type === 'bad' ? 'sawtooth' : 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(.0001, ac.currentTime + i * .11); g.gain.exponentialRampToValueAtTime(.12, ac.currentTime + i * .11 + .02); g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + i * .11 + .2); o.connect(g).connect(ac.destination); o.start(ac.currentTime + i * .11); o.stop(ac.currentTime + i * .11 + .22); });
+  } catch (e) { /* audio unavailable */ }
+}
+
+/* confetti */
+const cv = $('#fx'), cx = cv.getContext('2d'); let parts = [], raf = null;
+function sizeFx() { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; cx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); }
+addEventListener('resize', sizeFx); sizeFx();
+function confetti(n) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  for (let i = 0; i < (n || 120); i++) parts.push({ x: innerWidth / 2 + (Math.random() - .5) * 200, y: innerHeight * .35, vx: (Math.random() - .5) * 14, vy: -Math.random() * 13 - 4, s: 6 + Math.random() * 8, r: Math.random() * 6, vr: (Math.random() - .5) * .3, c: COLORS[i % COLORS.length], life: 120 });
+  if (!raf) loop();
+}
+function loop() {
+  cx.clearRect(0, 0, innerWidth, innerHeight);
+  parts.forEach((p) => { p.vy += .35; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life--; cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c; cx.fillRect(-p.s / 2, -p.s / 3, p.s, p.s * .66); cx.restore(); });
+  parts = parts.filter((p) => p.life > 0 && p.y < innerHeight + 40);
+  raf = parts.length ? requestAnimationFrame(loop) : (cx.clearRect(0, 0, innerWidth, innerHeight), null);
+}
+function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 1500); }
+
+/* floating background cards */
+(function () {
+  const f = $('#floaters'); const vals = GAME.floaters || [4, 15, 20, 28, 31, 43];
+  vals.forEach((v, i) => { const s = document.createElement('span'); s.textContent = v; s.style.background = COLORS[i % COLORS.length]; s.style.left = (5 + (i * 83) % 90) + '%'; s.style.top = (8 + (i * 37) % 80) + '%'; s.style.animationDelay = (-i * 2.3) + 's'; f.appendChild(s); });
+})();
+
+/* ---------- start ---------- */
+function renderStart() {
+  $('#app').innerHTML = `
+  <section class="start"><div class="card">
+    <span class="pill">${esc(GAME.badge)}</span>
+    <h1 class="title">${GAME.titleHTML}</h1>
+    <p class="lede">${esc(GAME.intro)}</p>
+    <div class="teams">
+      <label for="tA">Team 1 name<input id="tA" maxlength="18" value="${esc(S.teams[0])}"></label>
+      <label for="tB">Team 2 name<input id="tB" maxlength="18" value="${esc(S.teams[1])}"></label>
+    </div>
+    <div class="rules">${GAME.rules.map((r) => `<span>${esc(r)}</span>`).join('')}</div>
+    <button class="btn go" id="go">Let's play →</button>
+  </div></section>`;
+  $('#go').onclick = () => {
+    S.teams = [$('#tA').value.trim() || 'Team A', $('#tB').value.trim() || 'Team B'];
+    S.score = [0, 0]; S.turn = 0; S.q = 0; S.results = []; S.revealed = new Set(); S.guessed = false;
+    beep('tap'); renderQ();
+  };
+}
+
+/* ---------- scoreboard + mystery ---------- */
+function boardHTML() {
+  const dots = GAME.questions.map((_, i) => `<i class="${i < S.results.length ? (S.results[i] ? 'done' : 'miss') : i === S.q ? 'now' : ''}"></i>`).join('');
+  const team = (k) => `<div class="team ${k ? 'B' : 'A'} ${S.turn === k ? 'on' : ''}"><span class="sc" id="sc${k}">${S.score[k]}</span><span class="nm">${esc(S.teams[k])}</span><span class="turn">Your turn</span></div>`;
+  return `<div class="board">${team(0)}
+    <div class="mid"><div class="dots">${dots}</div>
+      <div style="display:flex;gap:10px;align-items:center"><div class="ring ${S.timerOn ? '' : 'off'}" id="ring"><b id="tm">${S.timerOn ? GAME.seconds : 'off'}</b></div>
+      <div class="tools"><button class="btn small" id="tt" title="Timer on or off">${S.timerOn ? 'Timer on' : 'Timer off'}</button><button class="btn small" id="snd" title="Sound on or off">${S.sound ? 'Sound on' : 'Sound off'}</button></div></div>
+    </div>${team(1)}</div>`;
+}
+function mysteryHTML() {
+  if (!GAME.mystery) return '';
+  const M = GAME.mystery.phrase;
+  const tiles = M.split('').map((ch, i) => ch === ' ' ? '<span class="tile gap"></span>' : `<span class="tile ${S.revealed.has(i) ? 'shown' : ''}" style="${S.revealed.has(i) ? 'background:' + COLORS[i % COLORS.length] : ''}">${S.revealed.has(i) ? ch : ''}</span>`).join('');
+  return `<section class="mystery">
+    <div class="top"><span class="lbl">${S.guessed ? 'Topic cracked! Keep playing for points' : esc(GAME.mystery.label)}</span>
+      ${S.guessed ? '' : `<form class="guess" id="guessForm"><input id="guess" placeholder="Think you know it? Type it here" autocomplete="off" aria-label="Guess the topic"><button class="btn small pink" type="submit">Guess for ${esc(S.teams[S.turn])}</button></form>`}</div>
+    <div class="tiles">${tiles}</div></section>`;
+}
+function bindTop() {
+  $('#tt').onclick = () => { S.timerOn = !S.timerOn; if (!S.timerOn) clearInterval(tick); else if (!answered) startTimer(); $('#tt').textContent = S.timerOn ? 'Timer on' : 'Timer off'; $('#ring').classList.toggle('off', !S.timerOn); $('#tm').textContent = S.timerOn ? left : 'off'; };
+  $('#snd').onclick = () => { S.sound = !S.sound; $('#snd').textContent = S.sound ? 'Sound on' : 'Sound off'; };
+  const gf = $('#guessForm');
+  if (gf) gf.onsubmit = (e) => { e.preventDefault(); tryGuess($('#guess').value); };
+}
+function revealLetters(n) {
+  if (!GAME.mystery) return;
+  const order = GAME.mystery.order; let c = 0;
+  for (const i of order) { if (c >= n) break; if (!S.revealed.has(i)) { S.revealed.add(i); c++; } }
+}
+function tryGuess(v) {
+  const norm = (s) => s.toLowerCase().replace(/[^a-z]/g, '');
+  if (!norm(v)) return;
+  if (GAME.mystery.accept.some((a) => norm(a) === norm(v))) {
+    S.guessed = true; S.score[S.turn] += GAME.mystery.bonus;
+    GAME.mystery.phrase.split('').forEach((ch, i) => { if (ch !== ' ') S.revealed.add(i); });
+    beep('win'); confetti(220); toast(S.teams[S.turn] + ' cracked it! +' + GAME.mystery.bonus);
+    const m = document.querySelector('.mystery'); if (m) m.outerHTML = mysteryHTML();
+    const sc = $('#sc' + S.turn); if (sc) sc.textContent = S.score[S.turn];
+  } else {
+    beep('bad'); toast('Not quite. Keep collecting clues!');
+    $('#guess').value = '';
+  }
+}
+
+/* ---------- question ---------- */
+function renderQ() {
+  answered = false; stealing = false; picks = [];
+  S.turn = S.q % 2;
+  const q = GAME.questions[S.q];
+  $('#app').innerHTML = `${boardHTML()}${mysteryHTML()}
+  <section class="qcard">
+    <div class="qhead"><span class="tag n">Question ${S.q + 1} of ${GAME.questions.length}</span>${q.ctx ? `<span class="tag ctx">${esc(q.ctx)}</span>` : ''}<span class="tag hot">${esc(q.skill)}</span></div>
+    <div class="qtext">${q.q}</div>
+    ${q.sub ? `<p class="qsub">${q.sub}</p>` : ''}
+    ${q.scene ? `<div class="scene">${q.scene}</div>` : ''}
+    <div id="area">${areaHTML(q)}</div>
+    <div id="fb"></div>
+  </section>`;
+  bindTop(); bindArea(q); startTimer();
+}
+function areaHTML(q) {
+  if (q.type === 'mc') return `<div class="opts">${q.options.map((o, i) => `<button class="opt o${i}" data-i="${i}" data-k="${'ABCD'[i]}">${o}</button>`).join('')}</div>`;
+  if (q.type === 'order') return `<div class="order">
+      <div class="slots">${q.answer.map((_, i) => `<div class="slot" data-s="${i}"><small>[${i}]</small></div>`).join('')}</div>
+      <div class="pool">${q.tiles.map((t, i) => `<button class="ptile" data-t="${i}" style="background:${COLORS[i % COLORS.length]}">${esc(t)}</button>`).join('')}</div>
+      <div class="acts"><button class="btn small" id="undo">Undo</button><button class="btn go small" id="check" disabled>Check answer</button></div></div>`;
+  if (q.type === 'line') return `<div class="code">${q.code.map((l, i) => `<button class="cl" data-l="${i}"><span>${i + 1}</span><span>${hl(l)}</span></button>`).join('')}</div>`;
+  return '';
+}
+function hl(line) {
+  return esc(line).replace(/(&quot;.*?&quot;)/g, '<span class="str">$1</span>')
+    .replace(/\b(for|in|while|and|print|range|len)\b/g, (m) => ['print', 'range', 'len'].includes(m) ? `<span class="fn">${m}</span>` : `<span class="kw">${m}</span>`)
+    .replace(/\b(\d+)\b/g, '<span class="num">$1</span>');
+}
+function bindArea(q) {
+  if (q.type === 'mc') {
+    document.querySelectorAll('.opt').forEach((b) => b.onclick = () => pickMC(+b.dataset.i));
+  } else if (q.type === 'order') {
+    const fill = () => {
+      document.querySelectorAll('.slot').forEach((s, i) => { const t = picks[i]; s.classList.toggle('filled', t != null); s.innerHTML = (t != null ? esc(q.tiles[t]) : '') + `<small>[${i}]</small>`; });
+      document.querySelectorAll('.ptile').forEach((b) => b.classList.toggle('used', picks.includes(+b.dataset.t)));
+      $('#check').disabled = picks.length !== q.answer.length;
+    };
+    document.querySelectorAll('.ptile').forEach((b) => b.onclick = () => { if (answered || picks.length >= q.answer.length) return; picks.push(+b.dataset.t); beep('tap'); fill(); });
+    $('#undo').onclick = () => { if (answered) return; picks.pop(); fill(); };
+    $('#check').onclick = () => checkOrder(q);
+  } else if (q.type === 'line') {
+    document.querySelectorAll('.cl').forEach((b) => b.onclick = () => pickLine(q, +b.dataset.l));
+  }
+}
+document.addEventListener('keydown', (e) => {
+  if (e.target.matches('input, textarea')) return;
+  const q = GAME.questions[S.q];
+  if (q && q.type === 'mc' && !answered && '1234abcd'.includes(e.key.toLowerCase())) { const i = '1234'.indexOf(e.key) >= 0 ? '1234'.indexOf(e.key) : 'abcd'.indexOf(e.key.toLowerCase()); const b = document.querySelector(`.opt[data-i="${i}"]`); if (b && !b.disabled) pickMC(i); }
+  if (e.key === 'Enter' && answered && $('#next')) $('#next').click();
+});
+
+/* timer */
+function startTimer() {
+  clearInterval(tick); left = GAME.seconds;
+  if (!S.timerOn) return;
+  const paint = () => { const r = $('#ring'); if (!r) return; r.style.setProperty('--p', left / GAME.seconds); $('#tm').textContent = left; r.classList.toggle('low', left <= 5); };
+  paint();
+  tick = setInterval(() => { left--; paint(); if (left <= 0) { clearInterval(tick); timeUp(); } }, 1000);
+}
+function timeUp() {
+  if (answered) return;
+  const q = GAME.questions[S.q];
+  if (q.type === 'mc' && !stealing && GAME.steal) { beep('bad'); startSteal(null); return; }
+  finishQ(false, "Time's up!");
+}
+
+/* answering */
+function pickMC(i) {
+  if (answered) return;
+  const q = GAME.questions[S.q]; const b = document.querySelector(`.opt[data-i="${i}"]`);
+  if (i === q.answer) { award(stealing ? Math.round(GAME.points / 2) : GAME.points); b.classList.add('right'); document.querySelectorAll('.opt').forEach((o) => { if (o !== b) o.classList.add('dim'); }); finishQ(true); return; }
+  b.classList.add('wrong'); b.disabled = true;
+  if (GAME.steal && !stealing) { beep('bad'); startSteal(i); return; }
+  document.querySelector(`.opt[data-i="${q.answer}"]`).classList.add('right');
+  finishQ(false);
+}
+function startSteal() {
+  stealing = true; S.turn = 1 - S.turn;
+  document.querySelectorAll('.team').forEach((t, k) => t.classList.toggle('on', k === S.turn));
+  $('#fb').innerHTML = `<div class="fb steal"><h3>Steal chance for ${esc(S.teams[S.turn])}!</h3><p>Pick the right answer for ${Math.round(GAME.points / 2)} points.</p></div>`;
+  const gb = document.querySelector('#guessForm button'); if (gb) gb.textContent = 'Guess for ' + S.teams[S.turn];
+  startTimer();
+}
+function checkOrder(q) {
+  if (answered) return;
+  let ok = true;
+  document.querySelectorAll('.slot').forEach((s, i) => { const good = String(q.tiles[picks[i]]) === String(q.answer[i]); s.classList.add(good ? 'ok' : 'no'); if (!good) ok = false; });
+  if (ok) award(GAME.points);
+  finishQ(ok);
+}
+function pickLine(q, i) {
+  if (answered) return;
+  const b = document.querySelector(`.cl[data-l="${i}"]`);
+  if (i === q.answer) { award(GAME.points); b.classList.add('right'); finishQ(true); }
+  else { b.classList.add('wrong'); document.querySelector(`.cl[data-l="${q.answer}"]`).classList.add('right'); finishQ(false); }
+}
+function award(p) {
+  S.score[S.turn] += p;
+  const el = $('#sc' + S.turn); if (el) { el.textContent = S.score[S.turn]; el.animate([{ transform: 'scale(1.5)' }, { transform: 'scale(1)' }], { duration: 450, easing: 'cubic-bezier(.2,1.4,.4,1)' }); }
+}
+function finishQ(ok, headline) {
+  answered = true; clearInterval(tick);
+  const q = GAME.questions[S.q];
+  S.results[S.q] = ok;
+  if (ok) { beep('good'); confetti(); revealLetters(GAME.mystery ? GAME.mystery.perCorrect : 0); }
+  else beep('bad');
+  const last = S.q + 1 >= GAME.questions.length;
+  const praise = ['Brilliant!', 'Nailed it!', 'Spot on!', 'Sharp thinking!', 'Superb!'][S.q % 5];
+  $('#fb').innerHTML = `<div class="fb ${ok ? 'good' : 'bad'}">
+    <h3>${headline || (ok ? praise + (S.turn != null ? ' +' + (stealing ? Math.round(GAME.points / 2) : GAME.points) + ' for ' + esc(S.teams[S.turn]) : '') : 'Not this time')}</h3>
+    <p><b>Why?</b> ${q.why}</p>
+    <div class="row">${q.link ? `<span class="tag ctx">${esc(q.link)}</span>` : '<span></span>'}<button class="btn go" id="next">${last ? (GAME.mystery && !S.guessed ? 'Final guess →' : 'See results →') : 'Next question →'}</button></div>
+  </div>`;
+  if (GAME.mystery) { const t = document.querySelector('.mystery .tiles'); if (t) t.outerHTML = mysteryHTML().match(/<div class="tiles">[\s\S]*?<\/div>/)[0]; }
+  $('#next').onclick = () => {
+    S.q++;
+    if (S.q >= GAME.questions.length) { if (GAME.mystery && !S.guessed) renderFinalGuess(); else renderEnd(); }
+    else renderQ();
+  };
+  $('#next').focus();
+}
+
+/* ---------- warm-up finale: guess the topic ---------- */
+function renderFinalGuess() {
+  clearInterval(tick);
+  const M = GAME.mystery;
+  $('#app').innerHTML = `${boardHTML()}${mysteryHTML()}
+  <section class="qcard">
+    <div class="qhead"><span class="tag n">Final round</span><span class="tag hot">Synthesize</span></div>
+    <div class="qtext">${M.finalQ}</div>
+    <div class="opts">${M.finalOptions.map((o, i) => `<button class="opt o${i}" data-i="${i}" data-k="${'ABCD'[i]}">${esc(o)}</button>`).join('')}</div>
+    <div id="fb"></div>
+  </section>`;
+  bindTop();
+  document.querySelectorAll('.opt').forEach((b) => b.onclick = () => {
+    const i = +b.dataset.i; const ok = i === M.finalAnswer;
+    document.querySelectorAll('.opt').forEach((o) => { o.disabled = true; if (+o.dataset.i === M.finalAnswer) o.classList.add('right'); else o.classList.add('dim'); });
+    if (ok) { S.score[S.turn] += M.bonus; S.guessed = true; beep('win'); confetti(220); } else beep('bad');
+    M.phrase.split('').forEach((ch, k) => { if (ch !== ' ') S.revealed.add(k); });
+    $('#fb').innerHTML = `<div class="fb ${ok ? 'good' : 'bad'}"><h3>${ok ? esc(S.teams[S.turn]) + ' wins the bonus! +' + M.bonus : 'The topic is ' + esc(M.finalOptions[M.finalAnswer])}</h3><p>${M.finalWhy}</p><div class="row"><span></span><button class="btn go" id="next">See results →</button></div></div>`;
+    $('#next').onclick = renderEnd;
+  });
+}
+
+/* ---------- end ---------- */
+function renderEnd() {
+  clearInterval(tick);
+  const [a, b] = S.score; const w = a === b ? -1 : a > b ? 0 : 1;
+  beep('win'); confetti(260);
+  $('#app').innerHTML = `<section class="end"><div class="card">
+    <span class="pill">${esc(GAME.badge)}</span>
+    <div class="crown">${w < 0 ? "It's a tie!" : esc(S.teams[w]) + ' wins!'}</div>
+    <div class="finals">
+      <div class="final A ${w === 0 ? 'win' : ''}"><span>${esc(S.teams[0])}</span><b>${a}</b></div>
+      <div class="final B ${w === 1 ? 'win' : ''}"><span>${esc(S.teams[1])}</span><b>${b}</b></div>
+    </div>
+    ${GAME.endHTML}
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="btn go" id="again">Play again</button></div>
+  </div></section>`;
+  $('#again').onclick = renderStart;
+  const mb = $('#showModel'); if (mb) mb.onclick = () => { $('#model').hidden = false; mb.remove(); };
+}
+
+renderStart();
+</script>
+</body>
+</html>
